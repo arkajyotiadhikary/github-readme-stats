@@ -1,4 +1,5 @@
 import { encodeHTML, flexLayout } from "./utils.js";
+import _ from "lodash";
 
 class Card {
   /**
@@ -175,6 +176,127 @@ class Card {
   }
 
   /**
+   * Renders decorative elements around the card
+   * @returns {string} SVG elements for decoration
+   */
+  renderDecorations() {
+    const decorSize = _.random(15, 25);
+    const decorations = [];
+    const spacing = this.width / 6;
+
+    // Same positioning logic
+    const positions = [
+      { x: spacing, y: -decorSize / 2 },
+      { x: this.width - spacing, y: -decorSize / 2 },
+      { x: -decorSize / 2, y: this.height / 3 },
+      { x: -decorSize / 2, y: (this.height / 3) * 2 },
+      { x: this.width - decorSize / 2, y: this.height / 3 },
+      { x: this.width - decorSize / 2, y: (this.height / 3) * 2 },
+      { x: spacing, y: this.height - decorSize / 2 },
+      { x: this.width - spacing, y: this.height - decorSize / 2 },
+    ];
+
+    positions.forEach((pos) => {
+      const shapeType = _.random(0, 3); // 0: hexagon, 1: circle, 2: square, 3: triangle
+      const opacity = _.random(0.3, 0.7);
+      const strokeWidth = _.random(0.5, 2);
+      const rotation = _.random(0, 360);
+
+      let shape = "";
+
+      switch (shapeType) {
+        case 0: // Hexagon
+          const hexPoints = _.range(6)
+            .map((i) => {
+              const angle = (i * Math.PI) / 3;
+              const x = decorSize / 2 + (decorSize / 2) * Math.cos(angle);
+              const y = decorSize / 2 + (decorSize / 2) * Math.sin(angle);
+              return `${x},${y}`;
+            })
+            .join(" ");
+          shape = `<polygon 
+            points="${hexPoints}"
+            fill="${this.colors.borderColor}"
+            opacity="${opacity}"
+            stroke="${this.colors.titleColor}"
+            stroke-width="${strokeWidth}"
+          />`;
+          break;
+
+        case 1: // Circle
+          shape = `<circle 
+            cx="${decorSize / 2}" 
+            cy="${decorSize / 2}" 
+            r="${decorSize / 3}"
+            fill="${this.colors.borderColor}"
+            opacity="${opacity}"
+            stroke="${this.colors.titleColor}"
+            stroke-width="${strokeWidth}"
+          />`;
+          break;
+
+        case 2: // Square
+          shape = `<rect 
+            x="${decorSize / 4}"
+            y="${decorSize / 4}"
+            width="${decorSize / 2}"
+            height="${decorSize / 2}"
+            fill="${this.colors.borderColor}"
+            opacity="${opacity}"
+            stroke="${this.colors.titleColor}"
+            stroke-width="${strokeWidth}"
+          />`;
+          break;
+
+        case 3: // Triangle
+          const trianglePoints = _.range(3)
+            .map((i) => {
+              const angle = (i * 2 * Math.PI) / 3;
+              const x = decorSize / 2 + (decorSize / 3) * Math.cos(angle);
+              const y = decorSize / 2 + (decorSize / 3) * Math.sin(angle);
+              return `${x},${y}`;
+            })
+            .join(" ");
+          shape = `<polygon 
+            points="${trianglePoints}"
+            fill="${this.colors.borderColor}"
+            opacity="${opacity}"
+            stroke="${this.colors.titleColor}"
+            stroke-width="${strokeWidth}"
+          />`;
+          break;
+      }
+
+      // Randomly add connecting lines
+      const hasLine = _.random(0, 1) === 1;
+      const line = hasLine
+        ? `
+        <line 
+          x1="${decorSize / 2}"
+          y1="${decorSize / 2}"
+          x2="${decorSize}"
+          y2="${decorSize / 2}"
+          stroke="${this.colors.titleColor}"
+          stroke-width="${strokeWidth / 2}"
+          opacity="${opacity}"
+        />
+      `
+        : "";
+
+      decorations.push(`
+        <g transform="translate(${pos.x}, ${pos.y}) rotate(${rotation}, ${decorSize / 2}, ${decorSize / 2})" 
+           class="decoration" 
+           style="--tx:${pos.x}px; --ty:${pos.y}px;">
+          ${shape}
+          ${line}
+        </g>
+      `);
+    });
+
+    return decorations.join("");
+  }
+
+  /**
    * Retrieves css animations for a card.
    *
    * @returns {string} Animation css.
@@ -182,22 +304,26 @@ class Card {
   getAnimations = () => {
     return `
       /* Animations */
-      @keyframes scaleInAnimation {
-        from {
-          transform: translate(-5px, 5px) scale(0);
-        }
-        to {
-          transform: translate(-5px, 5px) scale(1);
-        }
+      @keyframes floatAnimation {
+        0%, 100% { transform: translate(var(--tx), var(--ty)); }
+        50% { transform: translate(
+          calc(var(--tx) + ${_.random(-15, 15)}px), 
+          calc(var(--ty) - ${_.random(10, 25)}px)
+        ); }
       }
-      @keyframes fadeInAnimation {
-        from {
-          opacity: 0;
-        }
-        to {
-          opacity: 1;
-        }
+      .decoration {
+        animation: floatAnimation ${_.random(8, 12)}s ease-in-out infinite;
+        --tx: 0;
+        --ty: 0;
       }
+      .decoration:nth-child(1) { animation-delay: ${_.random(0, 1)}s; }
+      .decoration:nth-child(2) { animation-delay: ${_.random(0, 1)}s; }
+      .decoration:nth-child(3) { animation-delay: ${_.random(0, 1)}s; }
+      .decoration:nth-child(4) { animation-delay: ${_.random(0, 1)}s; }
+      .decoration:nth-child(5) { animation-delay: ${_.random(0, 1)}s; }
+      .decoration:nth-child(6) { animation-delay: ${_.random(0, 1)}s; }
+      .decoration:nth-child(7) { animation-delay: ${_.random(0, 1)}s; }
+      .decoration:nth-child(8) { animation-delay: ${_.random(0, 1)}s; }
     `;
   };
 
@@ -210,6 +336,19 @@ class Card {
    * @returns {string} The rendered card.
    */
   render(body) {
+    const customDesign = `
+      <g transform="translate(0,0)">
+        ${this.renderDecorations()}
+        <rect
+          width="${this.width}"
+          height="${this.height}"
+          rx="${this.border_radius}"
+          fill="none"
+          ${this.borderAnimation ? 'class="animated-border"' : ""}
+        />
+      </g>
+    `;
+
     return `
       <svg
         width="${this.width}"
@@ -221,6 +360,7 @@ class Card {
         aria-labelledby="descId"
         class="card-border"
       >
+
         <title id="titleId">${this.a11yTitle}</title>
         <desc id="descId">${this.a11yDesc}</desc>
         <style>
@@ -282,6 +422,8 @@ class Card {
         >
           ${body}
         </g>
+
+        ${customDesign}
       </svg>
     `;
   }
